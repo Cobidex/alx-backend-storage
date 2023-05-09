@@ -1,13 +1,2 @@
-// This script lists all databases in a MongoDB instance.
-
-// Connect to the default MongoDB instance on localhost
-var client = new Mongo();
-
-// List all databases
-var databases = client.getDatabaseNames();
-
-// Print the list of databases
-print("List of databases:");
-databases.forEach(function(database) {
-    print(database);
-});
+// List all databases in mongodb
+show databases
