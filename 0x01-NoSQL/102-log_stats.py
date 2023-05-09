@@ -1,47 +1,46 @@
 #!/usr/bin/env python3
-"""
-Script that provides some stats about Nginx logs stored in MongoDB
-"""
+""" This script performs various operations on a MongoDB database using pymongo. """
+
 from pymongo import MongoClient
 
+if __name__ == "__main__":
+    """ Prints statistics about Nginx logs stored in MongoDB. """
+    client = MongoClient('mongodb://127.0.0.1:27017')
+    nginx_collection = client.logs.nginx
 
-def log_stats():
-    """
-    Provides some stats about Nginx logs stored in MongoDB
-    """
-    client = MongoClient('mongodb://localhost:27017/')
-    logs_collection = client.logs.nginx
+    n_logs = nginx_collection.count_documents({})
+    print(f'{n_logs} logs')
 
-    # Count total number of logs
-    total_logs = logs_collection.count_documents({})
+    http_methods = ["GET", "POST", "PUT", "PATCH", "DELETE"]
+    print('HTTP methods:')
+    for method in http_methods:
+        count = nginx_collection.count_documents({"method": method})
+        print(f'\t{method}: {count}')
 
-    # Count number of logs by method
-    methods = logs_collection.aggregate([
-        {'$group': {'_id': '$method', 'count': {'$sum': 1}}}
+    status_checks = nginx_collection.count_documents(
+        {"method": "GET", "path": "/status"}
+    )
+
+    print(f'{status_checks} status checks')
+
+    top_ip_counts = nginx_collection.aggregate([
+        {"$group":
+            {
+                "_id": "$ip",
+                "count": {"$sum": 1}
+            }
+         },
+        {"$sort": {"count": -1}},
+        {"$limit": 10},
+        {"$project": {
+            "_id": 0,
+            "ip": "$_id",
+            "count": 1
+        }}
     ])
-    method_counts = {method['_id']: method['count'] for method in methods}
 
-    # Count number of status checks
-    status_checks = logs_collection.count_documents({'status': {'$regex': '^2.*'}})
-
-    # Find top 10 most present IPs
-    top_ips = logs_collection.aggregate([
-        {'$group': {'_id': '$ip', 'count': {'$sum': 1}}},
-        {'$sort': {'count': -1}},
-        {'$limit': 10}
-    ])
-
-    print(f"{total_logs} logs")
-
-    print("Methods:")
-    for method, count in method_counts.items():
-        print(f"\tmethod {method}: {count}")
-    print(f"{status_checks} status check")
-
-    print("IPs:")
-    for ip in top_ips:
-        print(f"\t{ip['_id']}: {ip['count']}")
-
-
-if __name__ == '__main__':
-    log_stats()
+    print("IPs with highest request count:")
+    for top_ip in top_ip_counts:
+        ip = top_ip.get("ip")
+        count = top_ip.get("count")
+        print(f'\t{ip}: {count}')
