@@ -1,15 +1,11 @@
-// This script adds a new attribute to documents with the name "Holberton school" in the "school" collection.
-
-// Get the database name from the command line arguments
-var dbName = "mydatabase"; // replace with the actual database name
-
-// Connect to the default MongoDB instance on localhost and select the database
-var client = new Mongo();
-var db = client.getDB(dbName);
-
-// Update documents with name="Holberton school"
+// adds a new attribute to a document in the collection school
 db.school.update(
-  { name: "Holberton school" },
-  { $set: { address: "972 Mission street" } },
-  { multi: true }
-);
+    { name: "Holberton school" },
+    {$set: {
+            address: "972 Mission street"
+        }
+    },
+    {
+        multi: true
+    }
+)
