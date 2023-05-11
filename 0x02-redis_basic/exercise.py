@@ -6,35 +6,39 @@ import redis
 from functools import wraps
 
 '''
-    A function to write strings to Redis.
+    This function writes strings to Redis.
 '''
 
 
-def count_function_calls(function: Callable) -> Callable:
+def count_calls(method: Callable) -> Callable:
     '''
-        A decorator to count the number of times a function is called.
+        This decorator counts the number of times a method is called.
     '''
 
-    @wraps(function)
+    @wraps(method)
     def wrapper(self, *args, **kwargs):
         '''
-            A wrapper function for counting function calls.
+            Wrapper function for the decorated method.
         '''
-        key = function.__qualname__
+        key = method.__qualname__
         self._redis.incr(key)
-        return function(self, *args, **kwargs)
+        return method(self, *args, **kwargs)
     return wrapper
 
 
-def log_function_calls(method: Callable) -> Callable:
-    """ A decorator to log the history of inputs and outputs for a particular function. """
+def call_history(method: Callable) -> Callable:
+    """ 
+    This decorator stores the history of inputs and outputs for a particular function.
+    """
     key = method.__qualname__
     inputs = key + ":inputs"
     outputs = key + ":outputs"
 
     @wraps(method)
-    def wrapper(self, *args, **kwargs):
-        """ Wrapper function for decorator functionality """
+    def wrapper(self, *args, **kwargs):  # sourcery skip: avoid-builtin-shadow
+        """ 
+        Wrapper function for the decorator functionality.
+        """
         self._redis.rpush(inputs, str(args))
         data = method(self, *args, **kwargs)
         self._redis.rpush(outputs, str(data))
@@ -43,9 +47,16 @@ def log_function_calls(method: Callable) -> Callable:
     return wrapper
 
 
-def replay_function_calls(function: Callable) -> None:
-    # A function to replay the history of a particular function
-    name = function.__qualname__
+def replay(method: Callable) -> None:
+    # sourcery skip: use-fstring-for-concatenation, use-fstring-for-formatting
+    """
+    This function replays the history of a function.
+    Args:
+        method: The function to be decorated
+    Returns:
+        None
+    """
+    name = method.__qualname__
     cache = redis.Redis()
     calls = cache.get(name).decode("utf-8")
     print("{} was called {} times:".format(name, calls))
@@ -58,29 +69,29 @@ def replay_function_calls(function: Callable) -> None:
 
 class Cache:
     '''
-        A Cache class.
+    This is a cache class.
     '''
     def __init__(self):
         '''
-            Initializes the cache.
+        This initializes the cache.
         '''
         self._redis = redis.Redis()
         self._redis.flushdb()
 
-    @count_function_calls
-    @log_function_calls
+    @count_calls
+    @call_history
     def store(self, data: Union[str, bytes, int, float]) -> str:
         '''
-            Stores data in the cache.
+        This method stores data in the cache.
         '''
-        random_key = str(uuid4())
-        self._redis.set(random_key, data)
-        return random_key
+        randomKey = str(uuid4())
+        self._redis.set(randomKey, data)
+        return randomKey
 
     def get(self, key: str,
             fn: Optional[Callable] = None) -> Union[str, bytes, int, float]:
         '''
-            Gets data from the cache.
+        This method gets data from the cache.
         '''
         value = self._redis.get(key)
         if fn:
@@ -89,14 +100,14 @@ class Cache:
 
     def get_str(self, key: str) -> str:
         '''
-            Gets a string from the cache.
+        This method gets a string from the cache.
         '''
         value = self._redis.get(key)
         return value.decode('utf-8')
 
     def get_int(self, key: str) -> int:
         '''
-            Gets an int from the cache.
+        This method gets an integer from the cache.
         '''
         value = self._redis.get(key)
         try:
