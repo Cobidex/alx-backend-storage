@@ -1,85 +1,106 @@
 #!/usr/bin/env python3
-"""
-Redis Cache exercise
-"""
-import uuid
-from typing import Callable, Any
+
+from typing import Callable, Optional, Union
+from uuid import uuid4
 import redis
+from functools import wraps
+
+'''
+    A function to write strings to Redis.
+'''
 
 
-class Cache:
-    """
-    Cache class
-    """
-    def __init__(self):
-        """
-        Initializes a new instance of the Cache class
-        """
-        self._redis = redis.Redis(host='localhost', port=6379, db=0)
+def count_function_calls(function: Callable) -> Callable:
+    '''
+        A decorator to count the number of times a function is called.
+    '''
 
-    def store(self, data: Any) -> str:
-        """
-        Generates a new UUID, stores the data with that UUID as key
-        and returns the UUID
-        """
-        key = str(uuid.uuid4())
-        self._redis.set(key, str(data))
-        return key
-
-
-def call_history(method: Callable) -> Callable:
-    """
-    Decorator that stores the history of inputs and outputs for a particular function
-    """
-    def wrapper(*args: Any, **kwargs: Any) -> Any:
-        """
-        The wrapper function that will store the input and output history
-        """
-        key_inputs = "{}:inputs".format(method.__qualname__)
-        key_outputs = "{}:outputs".format(method.__qualname__)
-        normalized_args = str(args)
-        # Append the input arguments to the Redis list
-        method._redis.rpush(key_inputs, normalized_args)
-        # Execute the wrapped function to retrieve the output
-        output = method(*args, **kwargs)
-        # Store the output using rpush in the "...:outputs" list
-        method._redis.rpush(key_outputs, output)
-        # Return the output
-        return output
+    @wraps(function)
+    def wrapper(self, *args, **kwargs):
+        '''
+            A wrapper function for counting function calls.
+        '''
+        key = function.__qualname__
+        self._redis.incr(key)
+        return function(self, *args, **kwargs)
     return wrapper
 
 
-@call_history
-def cached_function(x: int) -> int:
-    """
-    A sample function to test the call_history decorator
-    """
-    return x * 2
+def log_function_calls(method: Callable) -> Callable:
+    """ A decorator to log the history of inputs and outputs for a particular function. """
+    key = method.__qualname__
+    inputs = key + ":inputs"
+    outputs = key + ":outputs"
+
+    @wraps(method)
+    def wrapper(self, *args, **kwargs):
+        """ Wrapper function for decorator functionality """
+        self._redis.rpush(inputs, str(args))
+        data = method(self, *args, **kwargs)
+        self._redis.rpush(outputs, str(data))
+        return data
+
+    return wrapper
 
 
-def replay(func: Callable) -> None:
-    """
-    Displays the history of calls of a particular function
-    """
-    key_inputs = "{}:inputs".format(func.__qualname__)
-    key_outputs = "{}:outputs".format(func.__qualname__)
-    inputs = func._redis.lrange(key_inputs, 0, -1)
-    outputs = func._redis.lrange(key_outputs, 0, -1)
-    num_calls = len(inputs)
-    print("{} was called {} times:".format(func.__name__, num_calls))
-    for i, (input_str, output_str) in enumerate(zip(inputs, outputs)):
-        input_args = eval(input_str.decode('utf-8'))
-        output = output_str.decode('utf-8')
-        print("{}(*{}) -> {}".format(func.__name__, input_args, output))
+def replay_function_calls(function: Callable) -> None:
+    # A function to replay the history of a particular function
+    name = function.__qualname__
+    cache = redis.Redis()
+    calls = cache.get(name).decode("utf-8")
+    print("{} was called {} times:".format(name, calls))
+    inputs = cache.lrange(name + ":inputs", 0, -1)
+    outputs = cache.lrange(name + ":outputs", 0, -1)
+    for i, o in zip(inputs, outputs):
+        print("{}(*{}) -> {}".format(name, i.decode('utf-8'),
+                                     o.decode('utf-8')))
 
 
-if __name__ == '__main__':
-    cache = Cache()
-    s1 = cache.store("first")
-    s2 = cache.store("secont")
-    s3 = cache.store("third")
-    inputs = cache._redis.lrange("{}:inputs".format(cache.store.__qualname__), 0, -1)
-    outputs = cache._redis.lrange("{}:outputs".format(cache.store.__qualname__), 0, -1)
-    print("inputs: {}".format(inputs))
-    print("outputs: {}".format(outputs))
-    replay(cached_function)
+class Cache:
+    '''
+        A Cache class.
+    '''
+    def __init__(self):
+        '''
+            Initializes the cache.
+        '''
+        self._redis = redis.Redis()
+        self._redis.flushdb()
+
+    @count_function_calls
+    @log_function_calls
+    def store(self, data: Union[str, bytes, int, float]) -> str:
+        '''
+            Stores data in the cache.
+        '''
+        random_key = str(uuid4())
+        self._redis.set(random_key, data)
+        return random_key
+
+    def get(self, key: str,
+            fn: Optional[Callable] = None) -> Union[str, bytes, int, float]:
+        '''
+            Gets data from the cache.
+        '''
+        value = self._redis.get(key)
+        if fn:
+            value = fn(value)
+        return value
+
+    def get_str(self, key: str) -> str:
+        '''
+            Gets a string from the cache.
+        '''
+        value = self._redis.get(key)
+        return value.decode('utf-8')
+
+    def get_int(self, key: str) -> int:
+        '''
+            Gets an int from the cache.
+        '''
+        value = self._redis.get(key)
+        try:
+            value = int(value.decode('utf-8'))
+        except Exception:
+            value = 0
+        return value
