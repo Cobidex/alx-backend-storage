@@ -4,12 +4,14 @@
 
 from pymongo import MongoClient
 
+
 def top_students(mongo_collection):
     """
     Returns a sorted list of students based on their average score
 
     :param mongo_collection: pymongo collection object
-    :return: a list of dictionaries containing the name and average score of each student
+    :return: a list of dictionaries containing the name
+    and average score of each student
     """
     top_students = mongo_collection.aggregate([
         {

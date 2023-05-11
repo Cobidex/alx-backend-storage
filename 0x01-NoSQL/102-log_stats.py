@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-""" This script performs various operations on a MongoDB database using pymongo. """
+"""
+This script performs various operations on a MongoDB database
+using pymongo
+"""
 
 from pymongo import MongoClient
 
