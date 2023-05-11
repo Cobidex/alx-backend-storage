@@ -1,28 +1,44 @@
-import requests
+#!/usr/bin/env python3
+""" Redis Module: This script demonstrates how to cache and count HTTP requests using Redis. """
+
+from functools import wraps
 import redis
+import requests
+from typing import Callable
 
-cache = redis.Redis()
+# Create a Redis instance
+redis_ = redis.Redis()
 
+# Define a decorator to count the number of requests made to a specific URL
+def count_requests(method: Callable) -> Callable:
+    """ This decorator counts the number of requests made to a URL """
+    @wraps(method)
+    def wrapper(url):  
+        """ This wrapper function is used to count the requests and cache the results """
+        # Increment the count for the given URL
+        redis_.incr(f"count:{url}")
+        
+        # Check if the result for the given URL is already cached in Redis
+        cached_html = redis_.get(f"cached:{url}")
+        if cached_html:
+            # Return the cached HTML
+            return cached_html.decode('utf-8')
+        
+        # If the result is not cached, make a request to the URL
+        html = method(url)
+        
+        # Cache the result for 10 seconds
+        redis_.setex(f"cached:{url}", 10, html)
+        
+        # Return the HTML
+        return html
 
-def count_calls(method):
-    """Decorator to count the number of times a method is called."""
-    def wrapper(*args, **kwargs):
-        url = args[0]
-        cache.incr(f"count:{url}")
-        return method(*args, **kwargs)
     return wrapper
 
 
-@count_calls
+# Define a function to obtain the HTML content of a URL
+@count_requests
 def get_page(url: str) -> str:
-    """Fetches the HTML content of a URL and caches the result for 10 seconds."""
-    key = f"content:{url}"
-    content = cache.get(key)
-    if content is None:
-        print(f"Fetching {url}...")
-        response = requests.get(url)
-        content = response.content
-        cache.setex(key, 10, content)
-    else:
-        print(f"Using cached content for {url}")
-    return content.decode("utf-8")
+    """ This function obtains the HTML content of a given URL """
+    req = requests.get(url)
+    return req.text
