@@ -10,18 +10,18 @@ num = 0
 
 
 def get_page(url: str) -> str:
-    """Obtain the HTML content of a given URL and track how many times it is accessed
-       by incrementing a count stored in Redis with key 'count:{url}'
-       Cache the result with an expiration time of 10 seconds using Redis 'setex'
-       Return the HTML content of the URL
     """
-    
+    Obtain the HTML content of a given URL and track how many
+    times it is accessed
+    by incrementing a count stored in Redis with key
+    'count:{url}'
+    Cache the result with an expiration time of 10 seconds
+    using Redis 'setex'
+    Return the HTML content of the URL
+    """
     r.set(f"cached:{url}", num)
-    
     resp = requests.get(url)
-    
     r.incr(f"count:{url}")
-    
     r.setex(f"cached:{url}", 10, r.get(f"cached:{url}"))
     return resp.text
 
