@@ -27,16 +27,17 @@ def count_calls(method: Callable) -> Callable:
 
 
 def call_history(method: Callable) -> Callable:
-    """ 
-    This decorator stores the history of inputs and outputs for a particular function.
+    """
+    This decorator stores the history of inputs and
+    outputs for a particular function.
     """
     key = method.__qualname__
     inputs = key + ":inputs"
     outputs = key + ":outputs"
 
     @wraps(method)
-    def wrapper(self, *args, **kwargs):  # sourcery skip: avoid-builtin-shadow
-        """ 
+    def wrapper(self, *args, **kwargs):
+        """
         Wrapper function for the decorator functionality.
         """
         self._redis.rpush(inputs, str(args))
@@ -48,7 +49,6 @@ def call_history(method: Callable) -> Callable:
 
 
 def replay(method: Callable) -> None:
-    # sourcery skip: use-fstring-for-concatenation, use-fstring-for-formatting
     """
     This function replays the history of a function.
     Args:
