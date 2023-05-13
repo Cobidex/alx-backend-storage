@@ -4,7 +4,7 @@ import redis
 import time
 from web import get_page
 r = redis.Redis()
-url = "http://facebook.com"
+url = "http://github.com"
 text = get_page(url)
 print("returned text is :")
 print()
