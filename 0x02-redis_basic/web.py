@@ -6,7 +6,7 @@ import requests
 
 r = redis.Redis()
 
-num = 0
+count = 0
 
 
 def get_page(url: str) -> str:
@@ -19,10 +19,10 @@ def get_page(url: str) -> str:
     using Redis 'setex'
     Return the HTML content of the URL
     """
-    r.set(f"cached:{url}", num)
+    r.setnx(f"count:{url}", count)
     resp = requests.get(url)
     r.incr(f"count:{url}")
-    r.setex(f"cached:{url}", 10, r.get(f"cached:{url}"))
+    r.setex(f"count:{url}", 10, r.get(f"count:{url}"))
     return resp.text
 
 
