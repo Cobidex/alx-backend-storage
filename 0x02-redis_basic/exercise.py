@@ -1,13 +1,11 @@
 #!/usr/bin/env python3
-
+'''
+module to contain my redis methods, class
+'''
 from typing import Callable, Optional, Union
 from uuid import uuid4
 import redis
 from functools import wraps
-
-'''
-    This function writes strings to Redis.
-'''
 
 
 def count_calls(method: Callable) -> Callable:
