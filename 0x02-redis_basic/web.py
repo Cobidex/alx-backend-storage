@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-"""Web cache and tracker using Redis"""
+"""
+Web cache and tracker using Redis
+"""
 
 import redis
 import requests
@@ -15,15 +17,18 @@ def count_access(method: Callable) -> Callable:
     decorator method to get count of number of times url is assessed
     """
     @wraps(method)
-    def wrapper(*args, **kwargs):
+    def wrapper(url):
         """
         wrapper function around the method
         """
-        url = args[0]
         r.setnx(f"count:{url}", count)
+        cached_result = r.get(f"cache:{url}")
+        if cached_result:
+            return cached_result.decode("utf-8")
+        result = method(url)
         r.incr(f"count:{url}")
-        r.setex(f"count:{url}", 10, r.get(f"count:{url}"))
-        return method(*args, **kwargs)
+        r.setex(f"cache:{url}", 10, result)
+        return result
     return wrapper
 
 
@@ -31,11 +36,6 @@ def count_access(method: Callable) -> Callable:
 def get_page(url: str) -> str:
     """
     Obtain the HTML content of a given URL and track how many
-    times it is accessed
-    by incrementing a count stored in Redis with key
-    'count:{url}'
-    Cache the result with an expiration time of 10 seconds
-    using Redis 'setex'
     Return the HTML content of the URL
     """
     resp = requests.get(url)
