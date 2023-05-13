@@ -3,6 +3,7 @@
 
 import redis
 import requests
+from typing import Callable
 from functools import wraps
 
 r = redis.Redis()
@@ -14,7 +15,7 @@ def count_access(method: Callable) -> Callable:
     decorator method to get count of number of times url is assessed
     """
     @wraps(method)
-    def wrapper(self, *args, **kwargs):
+    def wrapper(*args, **kwargs):
         """
         wrapper function around the method
         """
@@ -39,7 +40,3 @@ def get_page(url: str) -> str:
     """
     resp = requests.get(url)
     return resp.text
-
-
-if __name__ == "__main__":
-    get_page('http://slowwly.robertomurray.co.uk')
