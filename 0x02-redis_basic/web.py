@@ -9,7 +9,6 @@ from typing import Callable
 from functools import wraps
 
 r = redis.Redis()
-count = 0
 
 
 def count_access(method: Callable) -> Callable:
@@ -21,7 +20,6 @@ def count_access(method: Callable) -> Callable:
         """
         wrapper function around the method
         """
-        r.setnx(f"count:{url}", count)
         cached_result = r.get(f"cache:{url}")
         if cached_result:
             return cached_result.decode("utf-8")
