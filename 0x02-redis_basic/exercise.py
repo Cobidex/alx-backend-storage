@@ -64,7 +64,7 @@ def replay(method: Callable) -> None:
     outputs = cache.lrange(f'{name}:outputs', 0, -1)
     for i, o in zip(inputs, outputs):
         print("{}(*{}) -> {}". format(name, i.decode('utf-8'),
-                                     o.decode('utf-8')))
+                                      o.decode('utf-8')))
 
 
 class Cache:
